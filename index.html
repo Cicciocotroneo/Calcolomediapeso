@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoraggio Peso Interattivo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 1000px; margin-bottom: 20px; }
+        .form-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+        input, button { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+        button { cursor: pointer; background-color: #1a73e8; color: white; border: none; font-weight: bold; }
+        button:hover { background-color: #1557b0; }
+        .btn-danger { background-color: #d93025; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
+        th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
+        .scroll-table { max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+    <h1>Diario del Peso</h1>
+
+    <div class="card">
+        <div class="form-group">
+            <div>
+                <label>Data:</label><br>
+                <input type="date" id="dateInput">
+            </div>
+            <div>
+                <label>Peso (kg):</label><br>
+                <input type="number" step="0.1" id="weightInput" placeholder="es. 84.5">
+            </div>
+            <button onclick="addData()">Aggiungi Registrazione</button>
+        </div>
+        
+        <canvas id="weightChart"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>Storico Registrazioni</h3>
+        <div class="scroll-table">
+            <table id="weightTable">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Peso (kg)</th>
+                        <th>Azione</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+        <button class="btn-danger" onclick="clearData()">Resetta tutto il Database</button>
+    </div>
+
+    <script>
+        // DATI INIZIALI (Il tuo JSON di partenza)
+        const initialData = [
+            {"date": "2026-01-08", "weight": 92.2}, {"date": "2026-02-02", "weight": 90.0}, {"date": "2026-02-14", "weight": 88.8},
+            {"date": "2026-02-16", "weight": 89.4}, {"date": "2026-02-18", "weight": 89.2}, {"date": "2026-02-24", "weight": 89.4},
+            {"date": "2026-02-25", "weight": 88.6}, {"date": "2026-02-26", "weight": 88.2}, {"date": "2026-02-27", "weight": 88.6},
+            {"date": "2026-02-28", "weight": 88.4}, {"date": "2026-03-08", "weight": 88.2}, {"date": "2026-03-10", "weight": 87.6},
+            {"date": "2026-03-11", "weight": 87.0}, {"date": "2026-03-12", "weight": 87.4}, {"date": "2026-03-13", "weight": 87.2},
+            {"date": "2026-03-14", "weight": 87.5}, {"date": "2026-03-15", "weight": 88.0}, {"date": "2026-03-17", "weight": 87.7},
+            {"date": "2026-03-19", "weight": 87.1}, {"date": "2026-03-20", "weight": 87.1}, {"date": "2026-03-21", "weight": 86.5},
+            {"date": "2026-03-22", "weight": 87.5}, {"date": "2026-03-23", "weight": 86.9}, {"date": "2026-03-24", "weight": 87.0},
+            {"date": "2026-03-25", "weight": 86.5}, {"date": "2026-03-26", "weight": 86.2}, {"date": "2026-03-27", "weight": 85.7},
+            {"date": "2026-03-29", "weight": 86.9}, {"date": "2026-03-30", "weight": 86.5}, {"date": "2026-03-31", "weight": 86.4},
+            {"date": "2026-04-01", "weight": 86.0}, {"date": "2026-04-02", "weight": 85.8}, {"date": "2026-04-03", "weight": 85.6},
+            {"date": "2026-04-04", "weight": 85.5}, {"date": "2026-04-05", "weight": 84.9}, {"date": "2026-04-06", "weight": 84.9},
+            {"date": "2026-04-08", "weight": 85.1}, {"date": "2026-04-09", "weight": 85.2}, {"date": "2026-04-10", "weight": 85.3},
+            {"date": "2026-04-11", "weight": 85.3}, {"date": "2026-04-12", "weight": 85.6}, {"date": "2026-04-13", "weight": 85.4},
+            {"date": "2026-04-14", "weight": 85.1}, {"date": "2026-04-15", "weight": 85.1}, {"date": "2026-04-16", "weight": 84.7},
+            {"date": "2026-04-17", "weight": 83.9}, {"date": "2026-04-18", "weight": 84.5}, {"date": "2026-04-19", "weight": 84.4},
+            {"date": "2026-04-20", "weight": 84.3}, {"date": "2026-04-21", "weight": 84.3}, {"date": "2026-04-22", "weight": 84.0},
+            {"date": "2026-04-23", "weight": 84.1}, {"date": "2026-04-24", "weight": 84.0}, {"date": "2026-04-25", "weight": 83.8},
+            {"date": "2026-04-26", "weight": 84.6}
+        ];
+
+        let myWeights = JSON.parse(localStorage.getItem('weightData')) || initialData;
+        let chart;
+
+        function initChart() {
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [
+                    { label: 'Peso Reale (kg)', data: [], borderColor: '#4285f4', spanGaps: true, tension: 0.1, pointRadius: 4 },
+                    { label: 'Media Mobile 7gg', data: [], borderColor: '#ea4335', borderDash: [5, 5], pointRadius: 0, tension: 0.3 }
+                ]},
+                options: { scales: { y: { min: 80 } } }
+            });
+            updateUI();
+        }
+
+        function updateUI() {
+            myWeights.sort((a, b) => new Date(a.date) - new Date(b.date));
+            localStorage.setItem('weightData', JSON.stringify(myWeights));
+
+            const start = new Date(myWeights[0].date);
+            const end = new Date(myWeights[myWeights.length - 1].date);
+            const dateArray = [];
+            const weightValues = [];
+            const ma7Values = [];
+
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toISOString().split('T')[0];
+                dateArray.push(dateStr);
+                
+                const entry = myWeights.find(w => w.date === dateStr);
+                weightValues.push(entry ? entry.weight : null);
+
+                // Calcolo Media Mobile 7gg Reale
+                const windowStart = new Date(d);
+                windowStart.setDate(windowStart.getDate() - 6);
+                const weekEntries = myWeights.filter(w => {
+                    const dEntry = new Date(w.date);
+                    return dEntry >= windowStart && dEntry <= d;
+                });
+                
+                if (weekEntries.length > 0) {
+                    const avg = weekEntries.reduce((acc, curr) => acc + curr.weight, 0) / weekEntries.length;
+                    ma7Values.push(avg.toFixed(2));
+                } else {
+                    ma7Values.push(null);
+                }
+            }
+
+            chart.data.labels = dateArray;
+            chart.data.datasets[0].data = weightValues;
+            chart.data.datasets[1].data = ma7Values;
+            chart.update();
+
+            // Aggiorna Tabella
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            [...myWeights].reverse().forEach((item, index) => {
+                tbody.innerHTML += `<tr>
+                    <td>${item.date}</td>
+                    <td>${item.weight} kg</td>
+                    <td><button onclick="deleteEntry('${item.date}')" style="background:#666; padding:4px 8px; font-size:0.8em">X</button></td>
+                </tr>`;
+            });
+        }
+
+        function addData() {
+            const date = document.getElementById('dateInput').value;
+            const weight = parseFloat(document.getElementById('weightInput').value);
+            if (!date || isNaN(weight)) return alert("Inserisci dati validi");
+            
+            const existing = myWeights.findIndex(w => w.date === date);
+            if (existing > -1) myWeights[existing].weight = weight;
+            else myWeights.push({ date, weight });
+            
+            updateUI();
+        }
+
+        function deleteEntry(date) {
+            myWeights = myWeights.filter(w => w.date !== date);
+            updateUI();
+        }
+
+        function clearData() {
+            if (confirm("Sei sicuro? Questo cancellerà tutto lo storico.")) {
+                myWeights = [];
+                localStorage.removeItem('weightData');
+                updateUI();
+            }
+        }
+
+        window.onload = initChart;
+        document.getElementById('dateInput').valueAsDate = new Date();
+    </script>
+</body>
+</html>
