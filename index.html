@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Peso Tracker Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -17,44 +17,43 @@
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             background-color: var(--bg); 
-            margin: 0; padding: 15px; 
+            margin: 0; padding: 10px; 
             display: flex; flex-direction: column; align-items: center;
             color: var(--text);
         }
-
-        h1 { font-size: 1.4rem; margin: 10px 0 20px; color: var(--primary); }
 
         .card { 
             background: var(--card); 
             padding: 20px; 
             border-radius: 16px; 
             box-shadow: 0 2px 12px rgba(0,0,0,0.08); 
-            width: 100%; max-width: 500px; 
+            width: 100%; max-width: 450px; 
             box-sizing: border-box; 
-            margin-bottom: 20px; 
+            margin-bottom: 15px; 
         }
 
-        /* Griglia Input Corretta */
-        .input-grid {
-            display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
-            gap: 12px;
+        /* Correzione Allineamento Input */
+        .input-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
             margin-bottom: 12px;
         }
 
+        #dateInput { flex: 1.5; min-width: 0; }
+        #weightInput { flex: 1; min-width: 0; }
+
         input { 
+            width: 100%;
             padding: 12px; 
             border: 1px solid #dadce0; 
             border-radius: 8px; 
             font-size: 16px; 
-            outline: none;
-            transition: border 0.2s;
+            box-sizing: border-box;
+            background: white;
         }
 
-        input:focus { border-color: var(--primary); }
-
-        button { 
-            cursor: pointer; 
+        button.main-btn { 
             background-color: var(--primary); 
             color: white; 
             border: none; 
@@ -63,97 +62,65 @@
             font-size: 16px; 
             font-weight: 600;
             width: 100%;
-            transition: opacity 0.2s;
+            cursor: pointer;
         }
 
-        button:active { opacity: 0.8; }
-
-        /* Slider */
+        /* Correzione Slider */
         .slider-section {
             margin-top: 25px;
             padding-top: 15px;
             border-top: 1px solid #f1f3f4;
+            text-align: center;
+            width: 100%;
         }
 
         input[type=range] {
             width: 100%;
             margin: 15px 0;
-            cursor: pointer;
+            display: block;
         }
 
-        .range-info {
+        .range-labels {
             display: flex;
             justify-content: space-between;
             font-size: 0.75rem;
             color: #70757a;
+            padding: 0 5px;
         }
 
-        /* Tabella Storico */
-        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .history-header h3 { margin: 0; font-size: 1.1rem; }
-
-        .scroll-table { 
-            max-height: 250px; 
-            overflow-y: auto; 
-            border-radius: 8px;
-            background: #fff;
-        }
-
+        .scroll-table { max-height: 250px; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; }
-        td { 
-            padding: 12px; 
-            border-bottom: 1px solid #f1f3f4; 
-            font-size: 0.9rem;
-        }
-
-        .weight-cell { font-weight: 600; text-align: center; }
-        .date-cell { color: #5f6368; }
-
-        .btn-del { 
-            background: #fce8e6; 
-            color: var(--danger); 
-            padding: 6px 10px; 
-            font-size: 0.75rem; 
-            width: auto;
-            border-radius: 6px;
-        }
+        td { padding: 12px 8px; border-bottom: 1px solid #f1f3f4; font-size: 0.9rem; }
+        .btn-del { background: #fce8e6; color: var(--danger); border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h1>Diario Peso</h1>
-
     <div class="card">
-        <div class="input-grid">
+        <div class="input-row">
             <input type="date" id="dateInput">
             <input type="number" step="0.1" id="weightInput" placeholder="Kg">
         </div>
-        <button onclick="addData()">Salva Peso</button>
+        <button class="main-btn" onclick="addData()">Salva Peso</button>
         
-        <div style="margin-top: 20px;">
+        <div style="margin-top: 20px; width: 100%;">
             <canvas id="weightChart"></canvas>
         </div>
 
         <div class="slider-section">
-            <div style="text-align: center; font-size: 0.9rem;">
-                Vista: <span id="rangeLabel" style="font-weight:bold; color:var(--primary)">30</span> giorni
-            </div>
+            <div>Vista: <span id="rangeLabel" style="font-weight:bold; color:var(--primary)">30</span> giorni</div>
             <input type="range" id="viewSlider" min="7" max="100" value="30" oninput="updateUI()">
-            <div class="range-info">
-                <span>7 giorni</span>
-                <span>Tutto lo storico</span>
+            <div class="range-labels">
+                <span>7 gg</span>
+                <span>Tutto</span>
             </div>
         </div>
     </div>
 
     <div class="card">
-        <div class="history-header">
-            <h3>Storico Pesate</h3>
-        </div>
+        <h3 style="margin-top:0">Storico</h3>
         <div class="scroll-table">
-            <table>
-                <tbody id="tableBody"></tbody>
-            </table>
+            <table><tbody id="tableBody"></tbody></table>
         </div>
     </div>
 
@@ -195,13 +162,12 @@
                     responsive: true,
                     interaction: { mode: 'index', intersect: false },
                     scales: { 
-                        y: { min: 82, ticks: { stepSize: 1 } },
+                        y: { min: 82, ticks: { font: { size: 10 } } },
                         x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } }
                     },
                     plugins: { legend: { display: false } }
                 }
             });
-            
             document.getElementById('viewSlider').max = calculateTotalDays();
             updateUI();
         }
@@ -209,58 +175,36 @@
         function calculateTotalDays() {
             if (myWeights.length < 2) return 7;
             const dates = myWeights.map(w => new Date(w.date));
-            const diffTime = Math.abs(Math.max(...dates) - Math.min(...dates));
-            return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            return Math.ceil(Math.abs(Math.max(...dates) - Math.min(...dates)) / 86400000) + 1;
         }
 
         function updateUI() {
             myWeights.sort((a, b) => new Date(a.date) - new Date(b.date));
             localStorage.setItem('weightData', JSON.stringify(myWeights));
-
             const daysToView = parseInt(document.getElementById('viewSlider').value);
             document.getElementById('rangeLabel').innerText = daysToView;
-
             const end = new Date(myWeights[myWeights.length - 1].date);
-            const start = new Date(end);
-            start.setDate(start.getDate() - (daysToView - 1));
-
-            const dateArray = [];
-            const weightValues = [];
-            const ma7Values = [];
+            const start = new Date(end); start.setDate(start.getDate() - (daysToView - 1));
+            const dateArray = [], weightValues = [], ma7Values = [];
 
             for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
                 const dateStr = d.toISOString().split('T')[0];
                 dateArray.push(d.toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'}));
-                
                 const entry = myWeights.find(w => w.date === dateStr);
                 weightValues.push(entry ? entry.weight : null);
-
                 const winStart = new Date(d); winStart.setDate(winStart.getDate() - 6);
-                const weekEntries = myWeights.filter(w => {
-                    const de = new Date(w.date); return de >= winStart && de <= d;
-                });
+                const weekEntries = myWeights.filter(w => { const de = new Date(w.date); return de >= winStart && de <= d; });
                 ma7Values.push(weekEntries.length > 0 ? (weekEntries.reduce((a,c)=>a+c.weight,0)/weekEntries.length).toFixed(2) : null);
             }
-
-            chart.data.labels = dateArray;
-            chart.data.datasets[0].data = weightValues;
-            chart.data.datasets[1].data = ma7Values;
-            chart.update();
-
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
+            chart.data.labels = dateArray; chart.data.datasets[0].data = weightValues; chart.data.datasets[1].data = ma7Values; chart.update();
+            const tbody = document.getElementById('tableBody'); tbody.innerHTML = '';
             [...myWeights].reverse().forEach(item => {
-                tbody.innerHTML += `<tr>
-                    <td class="date-cell">${new Date(item.date).toLocaleDateString('it-IT')}</td>
-                    <td class="weight-cell">${item.weight} kg</td>
-                    <td style="text-align:right"><button class="btn-del" onclick="deleteEntry('${item.date}')">Elimina</button></td>
-                </tr>`;
+                tbody.innerHTML += `<tr><td>${new Date(item.date).toLocaleDateString('it-IT')}</td><td style="font-weight:600">${item.weight} kg</td><td style="text-align:right"><button class="btn-del" onclick="deleteEntry('${item.date}')">Elimina</button></td></tr>`;
             });
         }
 
         function addData() {
-            const date = document.getElementById('dateInput').value;
-            const weight = parseFloat(document.getElementById('weightInput').value);
+            const date = document.getElementById('dateInput').value, weight = parseFloat(document.getElementById('weightInput').value);
             if (!date || isNaN(weight)) return;
             const i = myWeights.findIndex(w => w.date === date);
             if (i > -1) myWeights[i].weight = weight; else myWeights.push({date, weight});
@@ -268,12 +212,7 @@
             updateUI();
         }
 
-        function deleteEntry(date) {
-            if(confirm("Eliminare questa pesata?")) {
-                myWeights = myWeights.filter(w => w.date !== date);
-                updateUI();
-            }
-        }
+        function deleteEntry(date) { if(confirm("Eliminare?")) { myWeights = myWeights.filter(w => w.date !== date); updateUI(); } }
 
         window.onload = initChart;
         document.getElementById('dateInput').valueAsDate = new Date();
