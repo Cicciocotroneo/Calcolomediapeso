@@ -3,19 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoraggio Peso Interattivo</title>
+    <title>Monitoraggio Peso Avanzato</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 1000px; margin-bottom: 20px; }
         .form-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
         input, button { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-        button { cursor: pointer; background-color: #1a73e8; color: white; border: none; font-weight: bold; }
+        button { cursor: pointer; background-color: #1a73e8; color: white; border: none; font-weight: bold; transition: 0.2s; }
         button:hover { background-color: #1557b0; }
-        .btn-danger { background-color: #d93025; margin-top: 10px; }
+        .controls { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .info-text { font-size: 0.85em; color: #666; }
+        .btn-danger { background-color: #d93025; }
+        .btn-secondary { background-color: #5f6368; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
         th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
-        .scroll-table { max-height: 300px; overflow-y: auto; }
+        .scroll-table { max-height: 250px; overflow-y: auto; }
     </style>
 </head>
 <body>
@@ -36,6 +40,11 @@
         </div>
         
         <canvas id="weightChart"></canvas>
+        
+        <div class="controls">
+            <p class="info-text">💡 Usa la rotella o il pinch per zoomare. Trascina per scorrere.</p>
+            <button class="btn-secondary" onclick="resetZoom()">Reset Zoom</button>
+        </div>
     </div>
 
     <div class="card">
@@ -56,7 +65,6 @@
     </div>
 
     <script>
-        // DATI INIZIALI (Il tuo JSON di partenza)
         const initialData = [
             {"date": "2026-01-08", "weight": 92.2}, {"date": "2026-02-02", "weight": 90.0}, {"date": "2026-02-14", "weight": 88.8},
             {"date": "2026-02-16", "weight": 89.4}, {"date": "2026-02-18", "weight": 89.2}, {"date": "2026-02-24", "weight": 89.4},
@@ -90,7 +98,18 @@
                     { label: 'Peso Reale (kg)', data: [], borderColor: '#4285f4', spanGaps: true, tension: 0.1, pointRadius: 4 },
                     { label: 'Media Mobile 7gg', data: [], borderColor: '#ea4335', borderDash: [5, 5], pointRadius: 0, tension: 0.3 }
                 ]},
-                options: { scales: { y: { min: 80 } } }
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false }, // Mostra entrambi i valori al passaggio del mouse
+                    scales: { y: { min: 80 } },
+                    plugins: {
+                        zoom: {
+                            zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+                            pan: { enabled: true, mode: 'x' }
+                        },
+                        tooltip: { backgroundColor: 'rgba(255,255,255,0.9)', titleColor: '#333', bodyColor: '#333', borderColor: '#ddd', borderWidth: 1 }
+                    }
+                }
             });
             updateUI();
         }
@@ -112,7 +131,6 @@
                 const entry = myWeights.find(w => w.date === dateStr);
                 weightValues.push(entry ? entry.weight : null);
 
-                // Calcolo Media Mobile 7gg Reale
                 const windowStart = new Date(d);
                 windowStart.setDate(windowStart.getDate() - 6);
                 const weekEntries = myWeights.filter(w => {
@@ -133,14 +151,13 @@
             chart.data.datasets[1].data = ma7Values;
             chart.update();
 
-            // Aggiorna Tabella
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
-            [...myWeights].reverse().forEach((item, index) => {
+            [...myWeights].reverse().forEach(item => {
                 tbody.innerHTML += `<tr>
                     <td>${item.date}</td>
                     <td>${item.weight} kg</td>
-                    <td><button onclick="deleteEntry('${item.date}')" style="background:#666; padding:4px 8px; font-size:0.8em">X</button></td>
+                    <td><button onclick="deleteEntry('${item.date}')" style="background:#666; padding:4px 8px; font-size:0.8em">Elimina</button></td>
                 </tr>`;
             });
         }
@@ -149,11 +166,9 @@
             const date = document.getElementById('dateInput').value;
             const weight = parseFloat(document.getElementById('weightInput').value);
             if (!date || isNaN(weight)) return alert("Inserisci dati validi");
-            
             const existing = myWeights.findIndex(w => w.date === date);
             if (existing > -1) myWeights[existing].weight = weight;
             else myWeights.push({ date, weight });
-            
             updateUI();
         }
 
@@ -162,8 +177,10 @@
             updateUI();
         }
 
+        function resetZoom() { chart.resetZoom(); }
+
         function clearData() {
-            if (confirm("Sei sicuro? Questo cancellerà tutto lo storico.")) {
+            if (confirm("Attenzione: questo cancellerà tutti i tuoi dati. Procedere?")) {
                 myWeights = [];
                 localStorage.removeItem('weightData');
                 updateUI();
