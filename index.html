@@ -3,65 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoraggio Peso Avanzato</title>
+    <title>Peso Tracker - Mobile Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 1000px; margin-bottom: 20px; }
-        .form-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
-        input, button { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-        button { cursor: pointer; background-color: #1a73e8; color: white; border: none; font-weight: bold; transition: 0.2s; }
-        button:hover { background-color: #1557b0; }
-        .controls { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-        .info-text { font-size: 0.85em; color: #666; }
-        .btn-danger { background-color: #d93025; }
-        .btn-secondary { background-color: #5f6368; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
-        th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
-        .scroll-table { max-height: 250px; overflow-y: auto; }
+        body { font-family: -apple-system, system-ui, sans-serif; background-color: #f0f2f5; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 600px; box-sizing: border-box; margin-bottom: 15px; }
+        h1 { font-size: 1.5rem; color: #1a73e8; margin: 10px 0; }
+        .form-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        input, button { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; } /* 16px evita lo zoom automatico su iPhone */
+        button { cursor: pointer; background-color: #1a73e8; color: white; border: none; font-weight: bold; grid-column: span 2; }
+        .slider-container { margin-top: 20px; padding: 10px 0; border-top: 1px solid #eee; }
+        input[type=range] { width: 100%; margin: 10px 0; }
+        .scroll-table { max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
+        .btn-del { background: #ff4d4d; padding: 5px 10px; font-size: 0.7rem; grid-column: auto; }
     </style>
 </head>
 <body>
 
-    <h1>Diario del Peso</h1>
+    <h1>Diario Peso</h1>
 
     <div class="card">
         <div class="form-group">
-            <div>
-                <label>Data:</label><br>
-                <input type="date" id="dateInput">
-            </div>
-            <div>
-                <label>Peso (kg):</label><br>
-                <input type="number" step="0.1" id="weightInput" placeholder="es. 84.5">
-            </div>
-            <button onclick="addData()">Aggiungi Registrazione</button>
+            <input type="date" id="dateInput">
+            <input type="number" step="0.1" id="weightInput" placeholder="Peso (kg)">
+            <button onclick="addData()">Salva Peso</button>
         </div>
         
         <canvas id="weightChart"></canvas>
-        
-        <div class="controls">
-            <p class="info-text">💡 Usa la rotella o il pinch per zoomare. Trascina per scorrere.</p>
-            <button class="btn-secondary" onclick="resetZoom()">Reset Zoom</button>
+
+        <div class="slider-container">
+            <label id="rangeLabel">Visualizza ultimi: <b>30</b> giorni</label>
+            <input type="range" id="viewSlider" min="7" max="100" value="30" oninput="updateUI()">
+            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #888;">
+                <span>7 gg</span>
+                <span>Tutto</span>
+            </div>
         </div>
     </div>
 
     <div class="card">
-        <h3>Storico Registrazioni</h3>
+        <h3>Storico</h3>
         <div class="scroll-table">
             <table id="weightTable">
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Peso (kg)</th>
-                        <th>Azione</th>
-                    </tr>
-                </thead>
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
-        <button class="btn-danger" onclick="clearData()">Resetta tutto il Database</button>
     </div>
 
     <script>
@@ -95,55 +83,58 @@
             chart = new Chart(ctx, {
                 type: 'line',
                 data: { labels: [], datasets: [
-                    { label: 'Peso Reale (kg)', data: [], borderColor: '#4285f4', spanGaps: true, tension: 0.1, pointRadius: 4 },
-                    { label: 'Media Mobile 7gg', data: [], borderColor: '#ea4335', borderDash: [5, 5], pointRadius: 0, tension: 0.3 }
+                    { label: 'Peso', data: [], borderColor: '#4285f4', backgroundColor: 'rgba(66,133,244,0.1)', fill: true, spanGaps: true, tension: 0.1, pointRadius: 3 },
+                    { label: 'Media 7g', data: [], borderColor: '#ea4335', borderDash: [5, 5], pointRadius: 0, tension: 0.3 }
                 ]},
                 options: {
                     responsive: true,
-                    interaction: { mode: 'index', intersect: false }, // Mostra entrambi i valori al passaggio del mouse
-                    scales: { y: { min: 80 } },
-                    plugins: {
-                        zoom: {
-                            zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
-                            pan: { enabled: true, mode: 'x' }
-                        },
-                        tooltip: { backgroundColor: 'rgba(255,255,255,0.9)', titleColor: '#333', bodyColor: '#333', borderColor: '#ddd', borderWidth: 1 }
-                    }
+                    interaction: { mode: 'index', intersect: false },
+                    scales: { y: { min: 80, ticks: { stepSize: 1 } } },
+                    plugins: { legend: { position: 'bottom' } }
                 }
             });
+            
+            // Imposta lo slider al massimo dei giorni disponibili
+            document.getElementById('viewSlider').max = calculateTotalDays();
+            document.getElementById('viewSlider').value = 30;
             updateUI();
+        }
+
+        function calculateTotalDays() {
+            if (myWeights.length < 2) return 7;
+            const dates = myWeights.map(w => new Date(w.date));
+            const diffTime = Math.abs(Math.max(...dates) - Math.min(...dates));
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         }
 
         function updateUI() {
             myWeights.sort((a, b) => new Date(a.date) - new Date(b.date));
             localStorage.setItem('weightData', JSON.stringify(myWeights));
 
-            const start = new Date(myWeights[0].date);
+            const daysToView = parseInt(document.getElementById('viewSlider').value);
+            document.getElementById('rangeLabel').innerHTML = `Visualizza ultimi: <b>${daysToView}</b> giorni`;
+
             const end = new Date(myWeights[myWeights.length - 1].date);
+            const start = new Date(end);
+            start.setDate(start.getDate() - (daysToView - 1));
+
             const dateArray = [];
             const weightValues = [];
             const ma7Values = [];
 
             for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
                 const dateStr = d.toISOString().split('T')[0];
-                dateArray.push(dateStr);
+                dateArray.push(dateStr.slice(5)); // Mostra solo MM-DD per pulizia
                 
                 const entry = myWeights.find(w => w.date === dateStr);
                 weightValues.push(entry ? entry.weight : null);
 
-                const windowStart = new Date(d);
-                windowStart.setDate(windowStart.getDate() - 6);
+                // Media Mobile 7g
+                const winStart = new Date(d); winStart.setDate(winStart.getDate() - 6);
                 const weekEntries = myWeights.filter(w => {
-                    const dEntry = new Date(w.date);
-                    return dEntry >= windowStart && dEntry <= d;
+                    const de = new Date(w.date); return de >= winStart && de <= d;
                 });
-                
-                if (weekEntries.length > 0) {
-                    const avg = weekEntries.reduce((acc, curr) => acc + curr.weight, 0) / weekEntries.length;
-                    ma7Values.push(avg.toFixed(2));
-                } else {
-                    ma7Values.push(null);
-                }
+                ma7Values.push(weekEntries.length > 0 ? (weekEntries.reduce((a,c)=>a+c.weight,0)/weekEntries.length).toFixed(2) : null);
             }
 
             chart.data.labels = dateArray;
@@ -153,38 +144,24 @@
 
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
-            [...myWeights].reverse().forEach(item => {
-                tbody.innerHTML += `<tr>
-                    <td>${item.date}</td>
-                    <td>${item.weight} kg</td>
-                    <td><button onclick="deleteEntry('${item.date}')" style="background:#666; padding:4px 8px; font-size:0.8em">Elimina</button></td>
-                </tr>`;
+            [...myWeights].reverse().slice(0, 10).forEach(item => {
+                tbody.innerHTML += `<tr><td>${item.date}</td><td>${item.weight} kg</td><td><button class="btn-del" onclick="deleteEntry('${item.date}')">X</button></td></tr>`;
             });
         }
 
         function addData() {
             const date = document.getElementById('dateInput').value;
             const weight = parseFloat(document.getElementById('weightInput').value);
-            if (!date || isNaN(weight)) return alert("Inserisci dati validi");
-            const existing = myWeights.findIndex(w => w.date === date);
-            if (existing > -1) myWeights[existing].weight = weight;
-            else myWeights.push({ date, weight });
+            if (!date || isNaN(weight)) return alert("Dati mancanti");
+            const i = myWeights.findIndex(w => w.date === date);
+            if (i > -1) myWeights[i].weight = weight; else myWeights.push({date, weight});
+            document.getElementById('viewSlider').max = calculateTotalDays();
             updateUI();
         }
 
         function deleteEntry(date) {
             myWeights = myWeights.filter(w => w.date !== date);
             updateUI();
-        }
-
-        function resetZoom() { chart.resetZoom(); }
-
-        function clearData() {
-            if (confirm("Attenzione: questo cancellerà tutti i tuoi dati. Procedere?")) {
-                myWeights = [];
-                localStorage.removeItem('weightData');
-                updateUI();
-            }
         }
 
         window.onload = initChart;
