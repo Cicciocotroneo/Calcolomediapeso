@@ -6,86 +6,17 @@
     <title>Peso Tracker Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
-            --primary: #1a73e8;
-            --bg: #f8f9fa;
-            --card: #ffffff;
-            --text: #202124;
-            --danger: #ea4335;
-        }
-
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background-color: var(--bg); 
-            margin: 0; padding: 10px; 
-            display: flex; flex-direction: column; align-items: center;
-            color: var(--text);
-        }
-
-        .card { 
-            background: var(--card); 
-            padding: 20px; 
-            border-radius: 16px; 
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08); 
-            width: 100%; max-width: 450px; 
-            box-sizing: border-box; 
-            margin-bottom: 15px; 
-        }
-
-        .input-row {
-            display: flex;
-            gap: 10px;
-            width: 100%;
-            margin-bottom: 12px;
-        }
-
+        :root { --primary: #1a73e8; --bg: #f8f9fa; --card: #ffffff; --text: #202124; --danger: #ea4335; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; color: var(--text); }
+        .card { background: var(--card); padding: 20px; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); width: 100%; max-width: 450px; box-sizing: border-box; margin-bottom: 15px; }
+        .input-row { display: flex; gap: 10px; width: 100%; margin-bottom: 12px; }
         #dateInput { flex: 1.5; min-width: 0; }
         #weightInput { flex: 1; min-width: 0; }
-
-        input { 
-            width: 100%;
-            padding: 12px; 
-            border: 1px solid #dadce0; 
-            border-radius: 8px; 
-            font-size: 16px; 
-            box-sizing: border-box;
-            background: white;
-        }
-
-        button.main-btn { 
-            background-color: var(--primary); 
-            color: white; 
-            border: none; 
-            padding: 14px;
-            border-radius: 8px; 
-            font-size: 16px; 
-            font-weight: 600;
-            width: 100%;
-            cursor: pointer;
-        }
-
-        .slider-section {
-            margin-top: 25px;
-            padding-top: 15px;
-            border-top: 1px solid #f1f3f4;
-            text-align: center;
-            width: 100%;
-        }
-
-        input[type=range] {
-            width: 100%;
-            margin: 15px 0;
-            display: block;
-        }
-
-        .range-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            color: #70757a;
-            padding: 0 5px;
-        }
-
+        input { width: 100%; padding: 12px; border: 1px solid #dadce0; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; }
+        button.main-btn { background-color: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: 600; width: 100%; cursor: pointer; }
+        .slider-section { margin-top: 25px; padding-top: 15px; border-top: 1px solid #f1f3f4; text-align: center; width: 100%; }
+        input[type=range] { width: 100%; margin: 15px 0; display: block; }
+        .range-labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: #70757a; padding: 0 5px; }
         .scroll-table { max-height: 250px; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; }
         td { padding: 12px 8px; border-bottom: 1px solid #f1f3f4; font-size: 0.9rem; }
@@ -142,7 +73,7 @@
             {"date": "2026-04-17", "weight": 83.9}, {"date": "2026-04-18", "weight": 83.7}, {"date": "2026-04-19", "weight": 84.4},
             {"date": "2026-04-20", "weight": 84.0}, {"date": "2026-04-21", "weight": 84.0}, {"date": "2026-04-22", "weight": 84.2},
             {"date": "2026-04-23", "weight": 84.2}, {"date": "2026-04-24", "weight": 84.6}, {"date": "2026-04-25", "weight": 83.8},
-            {"date": "2026-04-26", "weight": 84.6}
+            {"date": "2026-04-26", "weight": 84.6}, {"date": "2026-04-27", "weight": 84.2}
         ];
 
         let myWeights = JSON.parse(localStorage.getItem('weightData')) || initialData;
@@ -160,15 +91,11 @@
                     responsive: true,
                     interaction: { mode: 'index', intersect: false },
                     scales: { 
-                        y: { min: 82, ticks: { font: { size: 10 } } },
+                        y: { ticks: { font: { size: 10 } } },
                         x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } }
                     },
                     plugins: { 
-                        legend: { 
-                            display: true, 
-                            position: 'bottom',
-                            labels: { boxWidth: 20, font: { size: 12 } }
-                        } 
+                        legend: { display: true, position: 'bottom', labels: { boxWidth: 20, font: { size: 12 } } } 
                     }
                 }
             });
@@ -187,8 +114,15 @@
             localStorage.setItem('weightData', JSON.stringify(myWeights));
             const daysToView = parseInt(document.getElementById('viewSlider').value);
             document.getElementById('rangeLabel').innerText = daysToView;
-            const end = new Date(myWeights[myWeights.length - 1].date);
-            const start = new Date(end); start.setDate(start.getDate() - (daysToView - 1));
+            const lastEntryDate = new Date(myWeights[myWeights.length - 1].date);
+            
+            // Padding finale: aggiungiamo un giorno extra invisibile per evitare il taglio
+            const end = new Date(lastEntryDate);
+            end.setDate(end.getDate() + 1); 
+
+            const start = new Date(lastEntryDate); 
+            start.setDate(start.getDate() - (daysToView - 1));
+
             const dateArray = [], weightValues = [], ma7Values = [];
 
             for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
